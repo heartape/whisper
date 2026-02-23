@@ -514,9 +514,16 @@
             const res = await fetch(`${BASE_URL}${path}`, { method, headers, body: body ? JSON.stringify(body) : null });
             const json = await res.json();
             log(method, path, json);
-            if (!res.ok) throw new Error(json.message || "请求失败");
+
+            // 核心修改点：除了判断 HTTP 状态，同时要求 json.code 必须等于 0 才是业务成功
+            if (!res.ok || json.code !== 0) {
+                throw new Error(json.message || "请求失败");
+            }
             return json;
-        } catch (err) { alert(err.message); return null; }
+        } catch (err) {
+            alert(err.message);
+            return null;
+        }
     }
 
     function log(method, path, data) {

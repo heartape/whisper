@@ -71,7 +71,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public Result<?> handleException(Exception e) {
         log.error(e.getMessage());
-        log.error(e.getCause().toString());
         log.error(Arrays.toString(e.getStackTrace()));
         return Result.error(500);
     }
