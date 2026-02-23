@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.heartape.whisper.mapper.ImSessionApplyMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO im_session_apply (biz_type, session_id, alias_name, applicant_id, reviewer_id, apply_info, status)
+        VALUES (#{bizType}, #{sessionId}, #{aliasName}, #{applicantId}, #{reviewerId}, #{applyInfo}, #{status})
+    </insert>
+
+    <select id="selectById" resultType="com.heartape.whisper.entity.ImSessionApply">
+        select * from im_session_apply where id = #{id}
+    </select>
+
+    <update id="updateReview">
+        update im_session_apply
+        set status = #{status},
+            reviewer_id = #{reviewerId},
+            review_note = #{reviewNote},
+            review_time = now()
+        where id = #{id}
+          and status = 'PENDING'
+    </update>
+    <update id="updateForReset">
+        update im_session_apply
+        set status = #{status}, apply_info = #{applyInfo}, alias_name = #{aliasName}
+        <if test="reviewerId != null">
+            , reviewer_id = #{reviewerId}
+        </if>
+        where id = #{id}
+    </update>
+
+    <select id="selectByApplicantIdAndReviewerId" resultType="com.heartape.whisper.entity.ImSessionApply">
+        select * from im_session_apply
+        where biz_type = #{bizType}
+          and applicant_id = #{applicantId}
+          and reviewer_id = #{reviewerId}
+    </select>
+
+    <select id="pendingGroupApply" resultType="com.heartape.whisper.entity.ImSessionApply">
+        select * from im_session_apply
+        where biz_type = 'GROUP'
+          and session_id = #{sessionId}
+          and applicant_id = #{applicantId}
+          and status = 0
+    </select>
+
+    <select id="selectListByReviewerId" resultType="com.heartape.whisper.entity.ImSessionApply">
+        select * from im_session_apply
+        where reviewer_id = #{reviewerId}
+        order by create_time desc
+    </select>
+
+    <select id="selectGroupListByReviewerId" resultType="com.heartape.whisper.entity.ImSessionApply">
+        SELECT
+            id,
+            session_id,
+            applicant_id,
+            apply_info,
+            status,
+            create_time
+        FROM im_session_apply
+        WHERE reviewer_id = #{reviewerId}
+          AND biz_type = 'GROUP'
+        ORDER BY create_time DESC
+        LIMIT 10;
+    </select>
+
+    <select id="selectListByApplicantId" resultType="com.heartape.whisper.entity.ImSessionApply">
+        select * from im_session_apply
+        where applicant_id = #{applicantId}
+          and status = 0
+        order by create_time desc
+    </select>
+</mapper>

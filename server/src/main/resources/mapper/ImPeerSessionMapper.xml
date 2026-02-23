@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.heartape.whisper.mapper.ImPeerSessionMapper">
+
+    <select id="selectByUsers" resultType="com.heartape.whisper.entity.ImPeerSession">
+        select * from im_peer_session
+        where uid1 = #{uid1} and uid2 = #{uid2}
+    </select>
+
+    <insert id="insert">
+        insert into im_peer_session(uid1, uid2, session_id, apply_status)
+        values (#{uid1}, #{uid2}, #{sessionId}, #{applyStatus})
+    </insert>
+</mapper>

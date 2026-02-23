@@ -1,0 +1,30 @@
+server:
+  port: 8080
+spring:
+  datasource:
+    url:
+    username:
+    password:
+  data:
+    redis:
+      host:
+      port: 6379
+      password:
+      ssl:
+        enabled: true              # 公网建议开启加密传输
+      lettuce:
+        pool:
+          max-active: 8            # 连接池最大连接数
+          max-idle: 8              # 最大空闲连接
+          min-idle: 0              # 最小空闲连接
+      timeout: 5000ms
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+jwt:
+  secret: 3qX8LZ2dX5b4M0N7qF6pKQw0X6JH5bKcZlRZpYJ0zH8=
+  expire: 604800000
+  issuer: server
+  audience: Android

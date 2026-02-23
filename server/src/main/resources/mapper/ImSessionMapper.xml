@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.heartape.whisper.mapper.ImSessionMapper">
+    <select id="selectListByUserId" resultType="com.heartape.whisper.entity.ImSession">
+        select s.id,
+               s.type,
+               s.name,
+               s.icon
+        from im_session s
+                 join im_session_member m on s.id = m.session_id
+                 left join user u on u.id = m.user_id
+        where m.user_id = #{userId}
+          and m.is_exit = 0
+    </select>
+
+    <select id="selectPeerListWithUserByNotUserId" resultType="com.heartape.whisper.entity.ImSessionWithMemberUser">
+        select s.id,
+               s.type,
+               m.alias_name,
+               u.username,
+               u.avatar
+        from im_session s
+                 join im_session_member m on s.id = m.session_id
+                 left join user u on u.id = m.user_id
+        where m.user_id != #{userId}
+          and s.id in (select session_id from im_session_member where user_id = #{userId} and is_exit = 0)
+          and s.type = 'PEER'
+          and m.is_exit = 0
+    </select>
+
+    <select id="messages" resultType="com.heartape.whisper.entity.ImMessage">
+        select * from im_message
+        where session_id = #{sessionId}
+        order by id desc
+        limit 50
+    </select>
+
+    <select id="syncMessages" resultType="com.heartape.whisper.entity.ImMessage">
+        select * from im_message
+        where session_id = #{sessionId}
+        <if test="beforeMessageId != null">
+            and id &lt; #{beforeMessageId}
+        </if>
+        order by id desc
+        limit #{limit}
+    </select>
+
+    <select id="check" resultType="java.lang.Boolean">
+        select count(1) > 0 from im_session_member
+        where session_id = #{sessionId}
+          and user_id = #{userId}
+          and is_exit = 0
+    </select>
+    <select id="peerSession" resultType="com.heartape.whisper.entity.result.ImSessionListResult">
+        SELECT
+            p.session_id AS id,
+            u.username  AS name,
+            'PEER' as type
+        FROM im_peer_session p
+                 JOIN user u
+                      ON u.id = CASE
+                                    WHEN p.uid1 = #{userId} THEN p.uid2
+                                    ELSE p.uid1
+                          END
+                 JOIN im_session_member sm
+                      ON sm.session_id = p.session_id
+                          AND sm.user_id = #{userId}
+                          AND sm.is_exit = 0
+        WHERE p.session_id = #{sessionId}
+          AND (p.uid1 = #{userId} OR p.uid2 = #{userId});
+
+    </select>
+
+    <select id="groupSession" resultType="com.heartape.whisper.entity.result.ImSessionListResult">
+        select * from im_session
+        where id = #{sessionId}
+    </select>
+
+    <select id="selectById" resultType="com.heartape.whisper.entity.ImSession">
+        select * from im_session
+        where id = #{sessionId}
+    </select>
+
+    <select id="selectByNameMatch" resultType="com.heartape.whisper.entity.ImSession">
+        select id, name, icon, type from im_session
+        where type = #{sessionEnum}
+          and name like concat('%', #{keyword}, '%')
+        limit 20
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into im_session(type, name, icon)
+        values (#{type}, #{name}, #{icon})
+    </insert>
+
+    <update id="touchUpdateTime">
+        update im_session set update_time = now() where id = #{sessionId}
+    </update>
+</mapper>

@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>社交聊天面板</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --panel: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+        }
+        body {
+            font-family: "Inter", "PingFang SC", sans-serif;
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            flex-direction: column;
+        }
+
+        /* 顶栏 */
+        header {
+            background: var(--panel);
+            padding: 0 32px;
+            height: 64px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            flex-shrink: 0;
+        }
+
+        .header-brand {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .user-profile-trigger {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+        .user-profile-trigger:hover { background: #f1f5f9; }
+        .user-avatar { width: 36px; height: 36px; border-radius: 50%; background: #e2e8f0; object-fit: cover; }
+        .user-id-badge { font-family: monospace; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+        .username-link { color: var(--primary); cursor: pointer; font-weight: 600; text-decoration: none; }
+        .username-link:hover { text-decoration: underline; }
+
+        /* 通用表单与按钮 */
+        .form-group { margin-bottom: 16px; }
+        label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; }
+        input, textarea, select {
+            width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box;
+        }
+        .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; background: var(--primary); color: white; transition: 0.2s; }
+        .btn:hover { background: #1d4ed8; }
+        .btn-ghost { background: #f1f5f9; color: #475569; }
+        .btn-ghost:hover { background: #e2e8f0; }
+
+        /* 模态框通用 */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.6); display: none; justify-content: center; align-items: center; z-index: 100;
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background: white; width: 90%; max-width: 600px; max-height: 85vh;
+            border-radius: 16px; overflow-y: auto; padding: 30px; position: relative;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+        }
+
+        /* 选项卡 */
+        .tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .tab { padding: 8px 16px; cursor: pointer; border-radius: 6px; font-weight: 500; }
+        .tab.active { background: var(--primary); color: white; }
+
+        /* 用户详情专用样式 */
+        .profile-detail-card { text-align: center; }
+        .profile-detail-card img { width: 80px; height: 80px; border-radius: 50%; margin-bottom: 15px; border: 3px solid var(--primary); object-fit: cover; }
+        .info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
+        .info-label { color: #64748b; font-weight: 500; }
+        .info-value { font-weight: 600; color: #1e293b; }
+
+        /* 日志 */
+        #log-panel {
+            position: fixed; bottom: 0; left: 0; width: 350px; height: 180px;
+            background: #0f172a; color: #10b981; font-family: monospace; font-size: 11px;
+            padding: 10px; overflow-y: auto; border-top-right-radius: 12px; z-index: 99;
+        }
+        .hidden { display: none !important; }
+
+        /* 聊天模块样式 */
+        main {
+            flex: 1;
+            padding: 20px 32px;
+            display: flex;
+            overflow: hidden;
+            box-sizing: border-box;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .chat-app-container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            border: 1px solid var(--border);
+        }
+
+        /* 左侧边栏 */
+        .chat-sidebar {
+            width: 300px;
+            background: #f8fafc;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-sidebar-header {
+            padding: 15px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-list-scroll { flex: 1; overflow-y: auto; }
+        .chat-session-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .chat-session-item:hover { background: #f1f5f9; }
+        .chat-session-item.active { background: #e0f2fe; border-right: 3px solid var(--primary); }
+        .chat-item-avatar {
+            width: 44px; height: 44px; border-radius: 50%; background: #cbd5e1; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center; font-size: 18px; color: white; margin-right: 12px; overflow: hidden;
+        }
+        .chat-item-info { flex: 1; min-width: 0; }
+        .chat-item-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-item-preview { font-size: 12px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* 右侧主窗口 */
+        .chat-main-window {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            position: relative;
+        }
+        .chat-header {
+            height: 64px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            justify-content: space-between;
+            background: rgba(255,255,255,0.9);
+            backdrop-filter: blur(5px);
+        }
+        .chat-messages-area {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            background: #f1f5f9;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .chat-input-wrapper {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            background: white;
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        .chat-input {
+            flex: 1;
+            resize: none;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            height: 46px;
+            font-family: inherit;
+        }
+        .chat-input:focus { outline: none; border-color: var(--primary); }
+
+        /* 群成员 */
+        .member-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f5f9;
+            gap: 12px;
+        }
+        .member-avatar {
+            width: 40px; height: 40px; border-radius: 50%; background: #e2e8f0;
+            display: flex; align-items: center; justify-content: center; font-weight: bold; color: #64748b; flex-shrink: 0; overflow: hidden;
+        }
+        .member-info { flex: 1; min-width: 0; }
+        .member-name { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+        .member-role { font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #e2e8f0; color: #475569; font-weight: normal; }
+        .member-role.owner { background: #fef08a; color: #854d0e; }
+        .member-role.admin { background: #bfdbfe; color: #1e3a8a; }
+        .member-time { font-size: 12px; color: #94a3b8; }
+
+        /* 消息气泡 */
+        .msg-avatar { width: 40px; height: 40px; border-radius: 50%; background: #ccc; flex-shrink: 0; object-fit: cover; }
+        .msg-content { max-width: 70%; }
+        .msg-bubble {
+            padding: 12px 16px;
+            border-radius: 12px;
+            position: relative;
+            font-size: 14px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+        .msg-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .msg-row.other .msg-bubble { background: white; border-top-left-radius: 4px; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .msg-row.me { flex-direction: row-reverse; }
+        .msg-row.me .msg-bubble { background: var(--primary); color: white; border-top-right-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .msg-meta { font-size: 11px; color: #94a3b8; margin-top: 6px; text-align: left; display: flex; gap: 6px; }
+        .msg-row.me .msg-meta { text-align: right; justify-content: flex-end; }
+
+        /* 空状态 */
+        .chat-empty-state {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100%; color: #94a3b8;
+        }
+
+        /* 聊天模块的小红点 */
+        .badge-dot {
+            width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block;
+        }
+
+        /* Omni Modal 专用样式 */
+        .omni-tab-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #64748b;
+            border-left: 3px solid transparent;
+            transition: 0.2s;
+        }
+        .omni-tab-item:hover { background: #e2e8f0; }
+        .omni-tab-item.active {
+            background: white;
+            color: var(--primary);
+            border-left-color: var(--primary);
+            font-weight: 600;
+        }
+        .result-info h5 { margin: 0 0 4px 0; font-size: 14px; }
+        .result-info p { margin: 0; font-size: 12px; color: #64748b; }
+        .badge-dot {
+            width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block; vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-brand">Social Chat</div>
+    <div class="user-profile-trigger" id="header-user-area" onclick="showUserProfile()">
+        <span id="header-user-id">未登录</span>
+        <img src="" id="header-avatar" class="user-avatar" style="display:none">
+        <div id="header-avatar-placeholder" class="user-avatar" style="display:inline-block"></div>
+    </div>
+</header>
+
+<main>
+    <!-- 即时通讯模块主界面 -->
+    <div class="chat-app-container">
+        <!-- 左侧：列表 -->
+        <div class="chat-sidebar">
+            <div class="chat-sidebar-header">
+                <h3 style="margin:0; font-size:16px;">消息</h3>
+                <div style="display:flex; gap:8px;">
+                    <!-- “创建/添加”按钮 -->
+                    <button class="btn btn-ghost" style="padding:6px; background: transparent;" onclick="showOmniModal()" title="添加">
+                        ➕ <span id="notify-badge-main" class="badge-dot hidden"></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 会话列表容器 -->
+            <div id="chat-list-sessions" class="chat-list-scroll">
+                <!-- 动态生成会话列表 -->
+            </div>
+        </div>
+
+        <!-- 右侧：聊天主窗口 -->
+        <div class="chat-main-window">
+            <div id="chat-window-empty" class="chat-empty-state">
+                <div style="font-size:40px; margin-bottom:10px;">💬</div>
+                <p>选择一个群聊或好友开始聊天</p>
+            </div>
+
+            <div id="chat-window-content" class="hidden" style="display:flex; flex-direction:column; height:100%">
+                <header class="chat-header">
+                    <div>
+                        <h3 id="chat-header-title" style="margin:0; font-size:16px;">聊天对象</h3>
+                        <span id="chat-header-status" style="font-size:12px; color:#64748b;">在线</span>
+                    </div>
+                    <button class="btn btn-ghost" onclick="showSessionInfo()">⚙️ 详情</button>
+                </header>
+
+                <div id="chat-messages-box" class="chat-messages-area">
+                    <!-- 消息气泡 -->
+                </div>
+
+                <div class="chat-input-wrapper">
+                    <textarea id="chat-msg-input" class="chat-input" placeholder="输入消息..." rows="1" onkeydown="if(event.keyCode===13 && !event.shiftKey){event.preventDefault(); sendChatMessage();}"></textarea>
+                    <button class="btn" onclick="sendChatMessage()">发送</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- 登录/注册强管控模态框 (背景更深，且点击外部不关闭) -->
+<div id="auth-modal" class="modal" style="background: rgba(15, 23, 42, 0.9);">
+    <div class="modal-content" style="max-width: 400px; padding: 30px;">
+        <h2 style="text-align: center; color: var(--primary); margin-top: 0;">欢迎使用</h2>
+        <div class="tabs" style="margin-bottom: 20px; justify-content: center;">
+            <div class="tab active" onclick="switchAuthTab('login')">登录</div>
+            <div class="tab" onclick="switchAuthTab('register')">注册</div>
+        </div>
+
+        <!-- 登录表单 -->
+        <div id="auth-login-box">
+            <div class="form-group"><input id="login-phone" placeholder="手机号" value="12345678901" /></div>
+            <div class="form-group"><input id="login-code" placeholder="验证码 (随意)" value="1234" /></div>
+            <button class="btn" style="width: 100%;" onclick="handleLogin()">登录进入聊天</button>
+        </div>
+
+        <!-- 注册表单 -->
+        <div id="auth-register-box" class="hidden">
+            <div class="form-group"><input id="reg-username" placeholder="昵称" value="孤独的浪" /></div>
+            <div class="form-group"><input id="reg-phone" placeholder="手机号" value="12345678903" /></div>
+            <div class="form-group"><input id="reg-code" placeholder="验证码" value="123456" /></div>
+            <div class="form-group"><input id="reg-pwd" type="password" placeholder="密码" value="123456" /></div>
+            <div class="form-group"><input id="reg-avatar" placeholder="头像 URL" value="https://picsum.photos/seed/u1/200" /></div>
+            <button class="btn" style="width: 100%;" onclick="handleRegister()">注册账号</button>
+        </div>
+    </div>
+</div>
+
+<!-- 综合操作模态框 -->
+<div id="omni-modal" class="modal" onclick="if(event.target===this) this.style.display='none'">
+    <div class="modal-content" style="max-width: 700px; height: 600px; display: flex; flex-direction: column; padding: 0;">
+        <!-- 模态框 Header -->
+        <div style="padding: 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0;">社交操作中心</h3>
+            <button class="btn btn-ghost" onclick="document.getElementById('omni-modal').style.display='none'">✕</button>
+        </div>
+
+        <div style="display: flex; flex: 1; overflow: hidden;">
+            <!-- 左侧导航 -->
+            <div style="width: 160px; background: #f8fafc; border-right: 1px solid #e2e8f0; padding: 10px 0;">
+                <div class="omni-tab-item active" onclick="switchOmniTab(this, 'add-friend')">添加好友</div>
+                <div class="omni-tab-item" onclick="switchOmniTab(this, 'join-group')">加入群聊</div>
+                <div class="omni-tab-item" onclick="switchOmniTab(this, 'create-group')">创建群聊</div>
+                <div class="omni-tab-item" onclick="switchOmniTab(this, 'records')">
+                    申请记录 <span id="notify-badge-inner" class="badge-dot hidden"></span>
+                </div>
+            </div>
+
+            <!-- 右侧内容区 -->
+            <div style="flex: 1; padding: 20px; overflow-y: auto;">
+
+                <!-- 添加好友 -->
+                <div id="omni-view-add-friend" class="omni-view">
+                    <h4>搜索用户</h4>
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <input id="search-friend-input" placeholder="输入用户名进行模糊搜索..." />
+                        <button class="btn" onclick="handleSearchUser()">搜索</button>
+                    </div>
+                    <div id="search-friend-result" class="result-list"></div>
+                </div>
+
+                <!-- 加入群聊 -->
+                <div id="omni-view-join-group" class="omni-view hidden">
+                    <h4>搜索群聊</h4>
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <input id="search-group-input" placeholder="输入群聊名称进行模糊搜索..." />
+                        <button class="btn" onclick="handleSearchGroup()">搜索</button>
+                    </div>
+                    <div id="search-group-result" class="result-list"></div>
+                </div>
+
+                <!-- 创建群聊 -->
+                <div id="omni-view-create-group" class="omni-view hidden">
+                    <h4>新建群组</h4>
+                    <div class="form-group"><label>群名称</label><input id="new-group-name" value="周末约球群" /></div>
+                    <div class="form-group"><label>群头像 URL</label><input id="new-group-avatar" value="https://picsum.photos/seed/s1/100" /></div>
+                    <button class="btn" style="width:100%" onclick="createGroupNew()">立即创建</button>
+                </div>
+
+                <!-- 申请记录 -->
+                <div id="omni-view-records" class="omni-view hidden">
+                    <div class="tabs" style="margin-bottom: 15px;">
+                        <div class="tab active" onclick="switchRecordTab(this, 'received')">我收到的</div>
+                        <div class="tab" onclick="switchRecordTab(this, 'sent')">我发出的</div>
+                    </div>
+                    <div id="record-list-container">
+                        <!-- 列表内容 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 会话信息/成员列表模态框 -->
+<div id="session-info-modal" class="modal" onclick="if(event.target===this) this.style.display='none'">
+    <div class="modal-content">
+        <h3 id="session-info-title" style="margin-top:0">会话详情</h3>
+
+        <!-- 操作区 -->
+        <div id="session-actions" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
+            <!-- 动态插入操作按钮 -->
+        </div>
+
+        <!-- 公告展示区 -->
+        <div id="session-announcement-display" style="display: none; margin-bottom: 15px; background: #fffbeb; padding: 10px; border-radius: 8px; border: 1px solid #fde68a;">
+            <h5 style="margin: 0 0 8px 0; color: #d97706; font-size: 13px;">📢 群公告</h5>
+            <div id="announcement-list"></div>
+        </div>
+
+        <!-- 公告发布区 (仅管理员/群主) -->
+        <div id="session-announcement-area" style="display: none; margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 8px;">
+            <textarea id="session-announcement-input" class="chat-input" placeholder="输入群公告..." rows="2" style="height: auto; margin-bottom: 8px;"></textarea>
+            <button class="btn" style="width: 100%; font-size: 13px;" onclick="publishAnnouncement()">发布公告</button>
+        </div>
+
+        <div id="session-member-list" style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
+            <!-- 动态插入成员 -->
+        </div>
+        <button class="btn btn-ghost" style="margin-top:20px; width:100%" onclick="document.getElementById('session-info-modal').style.display='none'">关闭</button>
+    </div>
+</div>
+
+<!-- 用户详情模态框 -->
+<div id="user-modal" class="modal" onclick="if(event.target===this) this.style.display='none'">
+    <div class="modal-content profile-detail-card">
+        <h3 style="margin-top:0">用户档案</h3>
+        <img id="detail-u-avatar" src="">
+        <div class="info-row"><span class="info-label">用户 ID</span><span class="info-value" id="detail-u-id">-</span></div>
+        <div class="info-row"><span class="info-label">用户名</span><span class="info-value" id="detail-u-name">-</span></div>
+        <div class="info-row"><span class="info-label">个人简介</span><span class="info-value" id="detail-u-bio">-</span></div>
+
+        <!-- 操作区 -->
+        <div id="user-action-area" style="margin-top: 15px;">
+            <button id="btn-follow" class="btn" style="width: 100%; display: none; margin-bottom: 10px;">+ 关注用户</button>
+            <button id="btn-logout" class="btn btn-ghost" style="width: 100%; display: none; border: 1px solid #ef4444; color: #ef4444;" onclick="clearAuth()">退出当前账号</button>
+        </div>
+
+        <button class="btn btn-ghost" style="margin-top:20px; width:100%" onclick="document.getElementById('user-modal').style.display='none'">关闭</button>
+    </div>
+</div>
+
+<!-- 日志面板 -->
+<div id="log-panel"><div id="log-content"></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+<script>
+    const BASE_URL = "http://localhost:8080";
+    let state = {
+        token: localStorage.getItem("social-token") || "",
+        user: null,
+        chat: {
+            client: null,
+            subscriptions: {},
+            sessionMap: {},
+            userCache: {},
+            activeSessionId: null
+        }
+    };
+
+    window.onload = async () => {
+        if (state.token) {
+            await fetchUserInfo();
+            initChatModule();
+            document.getElementById('auth-modal').style.display = 'none';
+        } else {
+            document.getElementById('auth-modal').style.display = 'flex';
+        }
+    };
+
+    async function api(path, method = "GET", body = null) {
+        const headers = { "Content-Type": "application/json", "Authorization": state.token };
+        try {
+            const res = await fetch(`${BASE_URL}${path}`, { method, headers, body: body ? JSON.stringify(body) : null });
+            const json = await res.json();
+            log(method, path, json);
+            if (!res.ok) throw new Error(json.message || "请求失败");
+            return json;
+        } catch (err) { alert(err.message); return null; }
+    }
+
+    function log(method, path, data) {
+        const entry = document.createElement("div");
+        entry.innerHTML = `<span style="color:#38bdf8">[${method}]</span> ${path}`;
+        document.getElementById("log-content").prepend(entry);
+    }
+
+    // --- 用户登录/注册管控逻辑 ---
+    function switchAuthTab(type) {
+        if (type === 'login') {
+            document.getElementById('auth-login-box').classList.remove('hidden');
+            document.getElementById('auth-register-box').classList.add('hidden');
+            document.querySelectorAll('#auth-modal .tab')[0].classList.add('active');
+            document.querySelectorAll('#auth-modal .tab')[1].classList.remove('active');
+        } else {
+            document.getElementById('auth-login-box').classList.add('hidden');
+            document.getElementById('auth-register-box').classList.remove('hidden');
+            document.querySelectorAll('#auth-modal .tab')[0].classList.remove('active');
+            document.querySelectorAll('#auth-modal .tab')[1].classList.add('active');
+        }
+    }
+
+    async function handleLogin() {
+        const phone = document.getElementById("login-phone").value;
+        const code = document.getElementById("login-code").value;
+        const res = await api("/login", "POST", { phone, code });
+        if (res?.data) {
+            state.token = res.data.Authorization;
+            localStorage.setItem("social-token", state.token);
+            await fetchUserInfo();
+            document.getElementById('auth-modal').style.display = 'none';
+            initChatModule();
+        }
+    }
+
+    function handleRegister() {
+        const phone = document.getElementById("reg-phone").value;
+        const code = document.getElementById("reg-code").value;
+        const username = document.getElementById("reg-username").value;
+        const password = document.getElementById("reg-pwd").value;
+        const res = api("/register", "POST", { phone, code, username, password });
+        if (res?.data) {
+            alert("注册成功！请登录。");
+            switchAuthTab('login');
+        }
+    }
+
+    function clearAuth() {
+        localStorage.removeItem("social-token");
+        location.reload();
+    }
+
+    async function fetchUserInfo() {
+        const res = await api("/user");
+        if (res?.data) {
+            state.user = res.data;
+            document.getElementById("header-user-id").innerHTML = `<span class="user-id-badge">UID: ${res.data.id}</span>`;
+            const avatarImg = document.getElementById("header-avatar");
+            avatarImg.src = res.data.avatar || "https://via.placeholder.com/36";
+            avatarImg.style.display = "inline-block";
+            document.getElementById("header-avatar-placeholder").style.display = "none";
+        }
+    }
+
+    async function viewUserProfile(userId = null) {
+        const reviewerId = userId || state.user?.id;
+        if (!reviewerId) { alert("请先登录"); return; }
+
+        const res = await api(`/user/${reviewerId}`);
+        if (!res?.data) return;
+
+        const u = res.data;
+        document.getElementById("detail-u-id").textContent = u.id;
+        document.getElementById("detail-u-name").textContent = u.nickname || u.username;
+        document.getElementById("detail-u-bio").textContent = u.bio || "暂无简介";
+        document.getElementById("detail-u-avatar").src = u.avatar || 'https://via.placeholder.com/80';
+
+        const followBtn = document.getElementById("btn-follow");
+        const logoutBtn = document.getElementById("btn-logout");
+
+        if (state.user && reviewerId !== state.user.id) {
+            followBtn.style.display = "block";
+            logoutBtn.style.display = "none";
+            followBtn.onclick = () => handleFollow(reviewerId);
+        } else {
+            followBtn.style.display = "none";
+            logoutBtn.style.display = "block"; // 看自己展示退出登录按钮
+        }
+
+        document.getElementById("user-modal").style.display = "flex";
+    }
+
+    async function handleFollow(id) {
+        const res = await api('/user/follow', 'POST', { id });
+        if(res) alert("关注成功！");
+    }
+
+    function showUserProfile() { viewUserProfile(); }
+
+    // --- 聊天模块核心逻辑 ---
+    function initChatModule() {
+        if (!state.chat.client || !state.chat.client.connected) {
+            connectChatWs();
+        }
+        loadSessionList();
+        checkNotifications();
+    }
+
+    function wsToken() {
+        if (!state.token) return '';
+        return state.token.startsWith('Bearer ') ? state.token : `Bearer ${state.token}`;
+    }
+
+    function connectChatWs() {
+        if (!state.token) return;
+        state.chat.client = new StompJs.Client({
+            brokerURL: "ws://localhost:8080/ws",
+            connectHeaders: { Authorization: wsToken() },
+            debug: (str) => console.log('[WS]', str),
+            reconnectDelay: 5000,
+            heartbeatIncoming: 4000,
+            heartbeatOutgoing: 4000,
+        });
+
+        state.chat.client.onConnect = () => {
+            if (state.chat.activeSessionId) {
+                subscribeSession(state.chat.activeSessionId);
+            }
+        };
+        state.chat.client.onStompError = (frame) => {
+            console.error('WS Error', frame.headers['message']);
+        };
+        state.chat.client.activate();
+    }
+
+    async function loadSessionList() {
+        const res = await api('/session');
+        const container = document.getElementById('chat-list-sessions');
+        container.innerHTML = '';
+        if (!res?.data) return;
+
+        state.chat.sessionMap = {};
+        res.data.forEach(s => {
+            state.chat.sessionMap[s.id] = s;
+            const isActive = s.id === state.chat.activeSessionId;
+            const avatarImg = `<img src="${s.icon}" style="width:100%; height:100%; object-fit:cover;">`;
+            const avatarTxt = s.name ? s.name[0].toUpperCase() : (s.type === 'GROUP' ? 'G' : 'U');
+            const iconColor = s.type === 'GROUP' ? '#3b82f6' : '#10b981';
+
+            const div = document.createElement('div');
+            div.className = `chat-session-item ${isActive ? 'active' : ''}`;
+            div.onclick = () => selectSession(s.id);
+            div.innerHTML = `
+                <div class="chat-item-avatar" style="background:${iconColor}">${s.icon ? avatarImg : avatarTxt}</div>
+                <div class="chat-item-info">
+                    <div class="chat-item-name">${s.name || (s.type === 'GROUP' ? '未命名群聊' : '好友')}</div>
+                    <div class="chat-item-preview">${s.type === 'GROUP' ? '[群聊]' : ''} 点击查看详情</div>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    // --- Omni Modal 操作 ---
+    function showOmniModal() {
+        document.getElementById('omni-modal').style.display = 'flex';
+        document.getElementById('search-friend-result').innerHTML = '';
+        document.getElementById('search-group-result').innerHTML = '';
+        checkNotifications();
+    }
+
+    function switchOmniTab(el, viewId) {
+        document.querySelectorAll('.omni-tab-item').forEach(t => t.classList.remove('active'));
+        el.classList.add('active');
+        document.querySelectorAll('.omni-view').forEach(v => v.classList.add('hidden'));
+        document.getElementById(`omni-view-${viewId}`).classList.remove('hidden');
+        if (viewId === 'records') {
+            loadRecords('received');
+        }
+    }
+
+    async function handleSearchUser() {
+        const keyword = document.getElementById('search-friend-input').value;
+        if (!keyword) return;
+        const container = document.getElementById('search-friend-result');
+        container.innerHTML = '搜索中...';
+
+        const res = await api(`/user/find?keyword=${encodeURIComponent(keyword)}`);
+        container.innerHTML = '';
+
+        if (!res?.data || res.data.length === 0) {
+            container.innerHTML = '<div style="color:#999; text-align:center">未找到匹配用户</div>';
+            return;
+        }
+
+        res.data.forEach(u => {
+            if (state.user && u.id === state.user.id) return;
+            const div = document.createElement('div');
+            div.className = 'result-item';
+            div.style.marginBottom = '15px';
+            div.innerHTML = `
+                <div class="result-info" style="flex:1; margin-right: 15px;">
+                    <h5>${u.username} (ID: ${u.id})</h5>
+                    <p>${u.bio || '无签名'}</p>
+                    <div style="display: flex; gap: 8px; margin-top: 8px;">
+                        <input type="text" id="apply-friend-info-${u.id}" class="chat-input" placeholder="输入申请附言..." style="height:32px; font-size:12px; flex: 1;" />
+                        <input type="text" id="apply-friend-alias-${u.id}" class="chat-input" placeholder="设置备注(选填)" style="height:32px; font-size:12px; width: 100px;" />
+                    </div>
+                </div>
+                <button class="btn" style="padding:6px 12px; font-size:12px; align-self:flex-start;" onclick="applyAddFriend(${u.id})">添加</button>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    async function applyAddFriend(reviewerId) {
+        const infoInput = document.getElementById(`apply-friend-info-${reviewerId}`);
+        const applyInfo = infoInput ? infoInput.value.trim() : '';
+        const aliasInput = document.getElementById(`apply-friend-alias-${reviewerId}`);
+        const aliasName = aliasInput ? aliasInput.value.trim() : '';
+        const res = await api('/session/peer/apply', 'POST', {
+            reviewerId: reviewerId,
+            applyInfo: applyInfo || '请求添加好友',
+            aliasName: aliasName
+        });
+        if(res) {
+            alert('好友申请已发送');
+            if(infoInput) infoInput.value = '';
+            if(aliasInput) aliasInput.value = '';
+        }
+    }
+
+    async function handleSearchGroup() {
+        const keyword = document.getElementById('search-group-input').value;
+        if (!keyword) return;
+        const container = document.getElementById('search-group-result');
+        container.innerHTML = '搜索中...';
+
+        const res = await api(`/session/find?sessionEnum=GROUP&keyword=${encodeURIComponent(keyword)}`);
+        container.innerHTML = '';
+
+        if (!res?.data || res.data.length === 0) {
+            container.innerHTML = '<div style="color:#999; text-align:center">未找到匹配群聊</div>';
+            return;
+        }
+
+        res.data.forEach(g => {
+            const div = document.createElement('div');
+            div.className = 'result-item';
+            div.style.marginBottom = '15px';
+            div.innerHTML = `
+                <div class="result-info" style="flex:1; margin-right: 15px;">
+                    <h5>${g.name} (ID: ${g.id})</h5>
+                    <p>群组搜索结果</p>
+                    <input type="text" id="apply-group-info-${g.id}" class="chat-input" placeholder="输入申请附言..." style="height:32px; margin-top:8px; font-size:12px; width:100%;" />
+                </div>
+                <button class="btn" style="padding:6px 12px; font-size:12px; align-self:flex-start;" onclick="applyJoinGroup(${g.id})">申请加入</button>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    async function applyJoinGroup(sessionId) {
+        const infoInput = document.getElementById(`apply-group-info-${sessionId}`);
+        const applyInfo = infoInput ? infoInput.value.trim() : '';
+        const res = await api('/session/group/apply', 'POST', { sessionId: sessionId, applyInfo: applyInfo || '请求加入群聊' });
+        if(res) {
+            alert('入群申请已发送');
+            if(infoInput) infoInput.value = '';
+        }
+    }
+
+    async function createGroupNew() {
+        const name = document.getElementById('new-group-name').value;
+        const avatar = document.getElementById('new-group-avatar').value;
+        const res = await api('/session/group', 'POST', { name, avatar });
+        if(res?.data) {
+            alert("创建群聊成功");
+            document.getElementById('omni-modal').style.display = 'none';
+            await loadSessionList();
+        }
+    }
+
+    async function switchRecordTab(el, type) {
+        el.parentNode.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        el.classList.add('active');
+        await loadRecords(type);
+    }
+
+    async function loadRecords(type) {
+        const container = document.getElementById('record-list-container');
+        container.innerHTML = '<div style="text-align:center; padding:20px; color:#999">加载中...</div>';
+
+        let endpoint = type === 'received' ? '/session/apply/pending' : '/session/apply/sent';
+
+        try {
+            const res = await api(endpoint);
+            container.innerHTML = '';
+            if (!res || !res.data || res.data.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:20px; color:#999">暂无记录</div>';
+                return;
+            }
+
+            res.data.forEach(item => {
+                const isReceived = (type === 'received');
+                const applyType = item.bizType;
+                let title;
+                if (applyType === 'FRIEND') title = `好友申请`;
+                else if (applyType === 'GROUP') title = `群聊申请 (ID: ${item.sessionId})`;
+                else return;
+
+                const sub = isReceived ? `申请人ID: ${item.applicantId}` : `目标ID: ${item.reviewerId || item.sessionId}`;
+                const div = document.createElement('div');
+                div.style = "padding:12px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center";
+
+                let actionHtml = '';
+                if (isReceived) {
+                    if (item.status === 'PENDING') {
+                        const aliasInputHtml = applyType === 'FRIEND' ?
+                            `<input type="text" id="review-alias-${item.id}" class="chat-input" placeholder="设置备注名(选填)" style="height:26px; font-size:12px; width:120px; padding:4px 8px; margin-bottom:5px;" />` : '';
+                        actionHtml = `
+                        <div style="display:flex; flex-direction:column; align-items:flex-end;">
+                            ${aliasInputHtml}
+                            <div style="display:flex; gap:5px">
+                                <button class="btn" style="padding:4px 10px; font-size:12px" onclick="handleApplyReview(${item.id}, true, '${applyType}')">同意</button>
+                                <button class="btn btn-ghost" style="padding:4px 10px; font-size:12px" onclick="handleApplyReview(${item.id}, false, '${applyType}')">拒绝</button>
+                            </div>
+                        </div>
+                    `;
+                    } else {
+                        actionHtml = `<span style="font-size:12px; color:#94a3b8">${item.status || '已处理'}</span>`;
+                    }
+                } else {
+                    actionHtml = `<span style="font-size:12px; color:#94a3b8">${item.status === 'PENDING' ? '已申请' : (item.status || '已处理')}</span>`;
+                }
+
+                div.innerHTML = `
+                    <div>
+                        <div style="font-weight:600; font-size:14px">${title}</div>
+                        <div style="font-size:12px; color:#64748b">${sub}</div>
+                        <div style="font-size:12px; margin-top:4px">附言: ${item.applyInfo || '无'}</div>
+                    </div>
+                    ${actionHtml}
+                `;
+                container.appendChild(div);
+            });
+        } catch (e) {
+            container.innerHTML = '<div style="text-align:center; padding:20px; color:#999">加载记录失败</div>';
+        }
+    }
+
+    async function handleApplyReview(id, approved, bizType) {
+        let payload = { applyId: id, approved, reviewNote: approved ? '同意' : '拒绝' };
+        if (approved && bizType === 'FRIEND') {
+            const aliasInput = document.getElementById(`review-alias-${id}`);
+            if (aliasInput && aliasInput.value.trim()) {
+                payload.aliasName = aliasInput.value.trim();
+            }
+        }
+        await api('/session/apply/review', 'POST', payload);
+        await loadRecords('received');
+        await checkNotifications();
+        if (approved) await loadSessionList();
+    }
+
+    async function checkNotifications() {
+        const res = await api('/session/apply/pending');
+        const badgeMain = document.getElementById('notify-badge-main');
+        const badgeInner = document.getElementById('notify-badge-inner');
+        if(res?.data && res.data.length > 0) {
+            badgeMain.classList.remove('hidden');
+            badgeInner.classList.remove('hidden');
+        } else {
+            badgeMain.classList.add('hidden');
+            badgeInner.classList.add('hidden');
+        }
+    }
+
+    // --- 聊天面板渲染 ---
+    async function selectSession(sessionId) {
+        state.chat.activeSessionId = sessionId;
+        document.getElementById('chat-window-empty').classList.add('hidden');
+        document.getElementById('chat-window-content').classList.remove('hidden');
+        document.getElementById('chat-window-content').style.display = 'flex';
+        await loadSessionList(); // 重新加载以高亮当前
+
+        const session = state.chat.sessionMap[sessionId];
+        if (session) {
+            document.getElementById('chat-header-title').textContent = session.name || `Session #${sessionId}`;
+            document.getElementById('chat-header-status').textContent = session.type;
+        }
+
+        await loadAndCacheSessionMembers(sessionId);
+        document.getElementById('chat-messages-box').innerHTML = '<div style="text-align:center;color:#ccc;padding:10px">加载历史消息...</div>';
+        await loadAndRenderHistory(sessionId);
+        subscribeSession(sessionId);
+    }
+
+    async function loadAndCacheSessionMembers(sessionId) {
+        const res = await api(`/session/${sessionId}/members`);
+        if (res?.data) {
+            let members = [];
+            if (Array.isArray(res.data)) {
+                members = res.data;
+            } else {
+                members = [...(res.data.member || []), ...(res.data.block || [])];
+            }
+            members.forEach(m => {
+                state.chat.userCache[m.userId] = {
+                    username: m.aliasName || m.username || `用户 ${m.userId}`,
+                    avatar: m.avatar || 'https://via.placeholder.com/36',
+                    role: m.role
+                };
+            });
+        }
+    }
+
+    async function loadAndRenderHistory(sessionId) {
+        const res = await api(`/session/${sessionId}/messages`);
+        const container = document.getElementById('chat-messages-box');
+        container.innerHTML = '';
+
+        if (!res?.data || res.data.length === 0) {
+            container.innerHTML = '<div style="text-align:center;color:#cbd5e1;margin-top:20px">暂无历史消息，打个招呼吧~</div>';
+            return;
+        }
+
+        const sorted = res.data.sort((a,b) => a.id - b.id);
+        sorted.forEach(msg => appendMessageBubble(msg));
+        scrollToBottom();
+    }
+
+    function appendMessageBubble(msg) {
+        const container = document.getElementById('chat-messages-box');
+
+        // 处理系统消息
+        if (msg.userId === 0 || msg.userId === '0') {
+            const div = document.createElement('div');
+            div.style = "display: flex; justify-content: center; margin: 10px 0; width: 100%;";
+            div.innerHTML = `
+                <div style="background: #e2e8f0; color: #475569; font-size: 12px; padding: 6px 16px; border-radius: 16px; text-align: center; max-width: 80%; line-height: 1.4;">
+                    ${escapeHtml(msg.messageInfo)}
+                </div>
+            `;
+            container.appendChild(div);
+            scrollToBottom();
+            return;
+        }
+
+        const isMe = (state.user && msg.userId === state.user.id);
+        let senderName = `User ${msg.userId}`;
+        let senderAvatar = "";
+
+        if(isMe) {
+            senderName = "我";
+            senderAvatar = state.user.avatar;
+        } else if (state.chat.userCache[msg.userId]) {
+            senderName = state.chat.userCache[msg.userId].username;
+            senderAvatar = state.chat.userCache[msg.userId].avatar;
+        }
+
+        const div = document.createElement('div');
+        div.className = `msg-row ${isMe ? 'me' : 'other'}`;
+        div.innerHTML = `
+            ${ senderAvatar ? `<img src="${senderAvatar}" class="msg-avatar">` : `<div class="msg-avatar" style="background:#cbd5e1"></div>` }
+            <div class="msg-content">
+                <div class="msg-bubble">${escapeHtml(msg.messageInfo)}</div>
+                <div class="msg-meta">
+                    <span>${senderName}</span>
+                    <span>${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                </div>
+            </div>
+        `;
+        container.appendChild(div);
+        scrollToBottom();
+    }
+
+    function scrollToBottom() {
+        const area = document.getElementById('chat-messages-box');
+        area.scrollTop = area.scrollHeight;
+    }
+
+    function subscribeSession(sessionId) {
+        if (!state.chat.client || !state.chat.client.connected) return;
+
+        if (state.chat.subscriptions[sessionId]) {
+            state.chat.subscriptions[sessionId].unsubscribe();
+        }
+
+        const session = state.chat.sessionMap[sessionId];
+        const isGroup = session && session.type === 'GROUP';
+        const destination = `${isGroup ? '/topic' : '/queue'}/session.${sessionId}`;
+
+        state.chat.subscriptions[sessionId] = state.chat.client.subscribe(destination, (msg) => {
+            try {
+                const body = JSON.parse(msg.body);
+                if (state.chat.activeSessionId === sessionId) {
+                    appendMessageBubble(body);
+                }
+            } catch (e) { console.error(e); }
+        });
+    }
+
+    function sendChatMessage() {
+        const content = document.getElementById('chat-msg-input').value.trim();
+        if (!content) return;
+
+        const sessionId = state.chat.activeSessionId;
+        const session = state.chat.sessionMap[sessionId];
+        if (!sessionId || !session) return;
+
+        const destination = `${session.type === 'GROUP' ? '/app/group' : '/app/peer'}/session.${sessionId}`;
+        state.chat.client.publish({
+            destination,
+            headers: { Authorization: wsToken() },
+            body: JSON.stringify({ messageType: 'TEXT', messageInfo: content })
+        });
+        document.getElementById('chat-msg-input').value = '';
+    }
+
+    function escapeHtml(text) {
+        if(!text) return '';
+        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    // --- 会话管理相关 ---
+    async function showSessionInfo() {
+        const sid = state.chat.activeSessionId;
+        if (!sid) return;
+
+        const session = state.chat.sessionMap[sid];
+        const isGroup = session && session.type === 'GROUP';
+
+        document.getElementById('session-info-modal').style.display = 'flex';
+        document.getElementById('session-info-title').textContent = isGroup ? '群聊详情' : '好友详情';
+
+        const container = document.getElementById('session-member-list');
+        const actionsContainer = document.getElementById('session-actions');
+        const announceArea = document.getElementById('session-announcement-area');
+        const annDisplay = document.getElementById('session-announcement-display');
+        const annList = document.getElementById('announcement-list');
+
+        container.innerHTML = '<div style="text-align:center; padding:20px; color:#999">加载信息中...</div>';
+        actionsContainer.innerHTML = '';
+        announceArea.style.display = 'none';
+        annDisplay.style.display = 'none';
+        annList.innerHTML = '';
+
+        if (isGroup) {
+            const annRes = await api(`/session/${sid}/announcement`);
+            if (annRes?.data) {
+                const announcements = Array.isArray(annRes.data) ? annRes.data : [annRes.data];
+                if (announcements.length > 0) {
+                    annDisplay.style.display = 'block';
+                    announcements.forEach(ann => {
+                        const publisher = state.chat.userCache[ann.userId]?.username || `User ${ann.userId}`;
+                        const time = new Date(ann.publishTime).toLocaleString();
+                        const div = document.createElement('div');
+                        div.style = "margin-bottom: 8px; font-size: 12px; color: #4b5563; border-bottom: 1px dashed #fcd34d; padding-bottom: 8px;";
+                        if (ann === announcements[announcements.length - 1]) {
+                            div.style.borderBottom = 'none';
+                            div.style.paddingBottom = '0';
+                            div.style.marginBottom = '0';
+                        }
+                        div.innerHTML = `
+                            <div style="margin-bottom: 4px; white-space: pre-wrap; word-wrap: break-word;">${escapeHtml(ann.content)}</div>
+                            <div style="font-size: 11px; color: #9ca3af; text-align: right;">— ${escapeHtml(publisher)} · ${time}</div>
+                        `;
+                        annList.appendChild(div);
+                    });
+                }
+            }
+        }
+
+        const res = await api(`/session/${sid}/members`);
+        if (!res?.data) {
+            container.innerHTML = '<div style="text-align:center; padding:20px; color:#ef4444">加载失败</div>';
+            return;
+        }
+
+        let sessionMembers = [];
+        let blockMembers = [];
+        if (Array.isArray(res.data)) {
+            sessionMembers = res.data;
+        } else {
+            sessionMembers = res.data.member || [];
+            blockMembers = res.data.block || [];
+        }
+
+        const memberMap = new Map();
+        sessionMembers.forEach(m => memberMap.set(m.userId, { ...m, isBlock: false }));
+        blockMembers.forEach(m => {
+            const isBlocked = m.isBlock !== undefined ? m.isBlock : true;
+            if (memberMap.has(m.userId)) {
+                memberMap.get(m.userId).isBlock = isBlocked;
+            } else {
+                memberMap.set(m.userId, { ...m, isBlock: isBlocked });
+            }
+        });
+        const allMembers = Array.from(memberMap.values());
+
+        container.innerHTML = '';
+        if (allMembers.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:20px; color:#999">暂无成员信息</div>';
+            return;
+        }
+
+        let myRole = 'MEMBER';
+        if (isGroup && state.user) {
+            const me = allMembers.find(m => m.userId === state.user.id);
+            if (me) myRole = me.role;
+        }
+
+        if (isGroup && (myRole === 'OWNER' || myRole === 'ADMIN')) {
+            announceArea.style.display = 'block';
+        }
+
+        let isPeerBlocked = false;
+        if (!isGroup && state.user) {
+            const peer = allMembers.find(m => m.userId !== state.user.id);
+            if (peer && peer.isBlock) {
+                isPeerBlocked = true;
+            }
+        }
+
+        actionsContainer.innerHTML += `<button class="btn btn-ghost" style="padding: 6px 12px; font-size: 12px;" onclick="changeSessionAlias(${sid})">修改备注</button>`;
+
+        if (isGroup) {
+            actionsContainer.innerHTML += `<button class="btn btn-ghost" style="padding: 6px 12px; font-size: 12px; color: #ef4444;" onclick="quitGroup(${sid})">退出群聊</button>`;
+        } else {
+            actionsContainer.innerHTML += `<button class="btn btn-ghost" style="padding: 6px 12px; font-size: 12px; color: #ef4444;" onclick="deleteFriend(${sid})">删除好友</button>`;
+            if (isPeerBlocked) {
+                actionsContainer.innerHTML += `<button class="btn btn-ghost" style="padding: 6px 12px; font-size: 12px; color: #10b981;" onclick="unblockUser(${sid})">取消拉黑</button>`;
+            } else {
+                actionsContainer.innerHTML += `<button class="btn btn-ghost" style="padding: 6px 12px; font-size: 12px; color: #ef4444;" onclick="blockFriend(${sid})">拉黑好友</button>`;
+            }
+        }
+
+        const roleMap = {
+            'OWNER': { text: '群主', class: 'owner', level: 3 },
+            'ADMIN': { text: '管理员', class: 'admin', level: 2 },
+            'MEMBER': { text: '成员', class: '', level: 1 }
+        };
+
+        const myLevel = roleMap[myRole] ? roleMap[myRole].level : 1;
+
+        allMembers.forEach(m => {
+            const roleInfo = roleMap[m.role] || { text: m.role || '成员', class: '', level: 1 };
+            const joinDate = m.joinTime ? new Date(m.joinTime).toLocaleString() : '未知时间';
+            const displayName = m.aliasName || m.username || `用户 ${m.userId}`;
+            const avatarHtml = m.avatar
+                ? `<img src="${m.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`
+                : displayName.charAt(0).toUpperCase();
+
+            const div = document.createElement('div');
+            div.className = 'member-item';
+            div.style.justifyContent = 'space-between';
+            const opacity = m.isBlock ? '0.6' : '1';
+
+            let leftHtml = `
+                <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; opacity: ${opacity};">
+                    <div class="member-avatar">${avatarHtml}</div>
+                    <div class="member-info">
+                        <div class="member-name">
+                            <span class="username-link" onclick="viewUserProfile(${m.userId}); document.getElementById('session-info-modal').style.display='none';">${displayName}</span>
+                            ${(isGroup && m.role) ? `<span class="member-role ${roleInfo.class}">${roleInfo.text}</span>` : ''}
+                            ${m.isBlock ? `<span class="member-role" style="background:#fee2e2; color:#ef4444;">已拉黑</span>` : ''}
+                        </div>
+                        <div class="member-time">${isGroup ? '加入时间' : '添加时间'}: ${joinDate}</div>
+                    </div>
+                </div>
+            `;
+
+            let rightHtml = '';
+            if (isGroup && m.userId !== state.user?.id) {
+                if (m.isBlock) {
+                    if (myLevel > roleInfo.level || myRole === 'OWNER' || myRole === 'ADMIN') {
+                        rightHtml = `
+                            <div style="display:flex; gap: 5px; flex-shrink: 0;">
+                                <button class="btn btn-ghost" style="padding: 4px 8px; font-size: 11px; color: #10b981;" onclick="unblockUser(${sid}, ${m.userId})">取消拉黑</button>
+                            </div>
+                        `;
+                    }
+                } else {
+                    if (myLevel > roleInfo.level) {
+                        rightHtml = `
+                            <div style="display:flex; gap: 5px; flex-shrink: 0;">
+                                <button class="btn btn-ghost" style="padding: 4px 8px; font-size: 11px; color: #ef4444;" onclick="kickMember(${sid}, ${m.userId})">踢出</button>
+                                <button class="btn btn-ghost" style="padding: 4px 8px; font-size: 11px; color: #ef4444;" onclick="kickAndBlockMember(${sid}, ${m.userId})">拉黑</button>
+                            </div>
+                        `;
+                    }
+                }
+            }
+
+            div.innerHTML = leftHtml + rightHtml;
+            container.appendChild(div);
+        });
+    }
+
+    async function changeSessionAlias(sid) {
+        const newAlias = prompt("请输入新的备注名：");
+        if (newAlias === null) return;
+        const res = await api('/session/alias', 'PUT', { sessionId: sid, aliasName: newAlias });
+        if (res) {
+            alert("修改备注成功");
+            await loadSessionList();
+            await showSessionInfo();
+        }
+    }
+
+    async function deleteFriend(sid) {
+        if (!confirm("确定要删除该好友吗？")) return;
+        const res = await api('/session/exit', 'DELETE', { sessionId: sid });
+        if (res) {
+            alert("已删除好友");
+            document.getElementById('session-info-modal').style.display = 'none';
+            document.getElementById('chat-window-empty').classList.remove('hidden');
+            document.getElementById('chat-window-content').classList.add('hidden');
+            await loadSessionList();
+        }
+    }
+
+    async function blockFriend(sid) {
+        if (!confirm("确定要拉黑该好友吗？拉黑后将无法收到对方消息。")) return;
+        const res = await api('/session/block', 'PUT', { sessionId: sid });
+        if (res) {
+            alert("已拉黑好友");
+            document.getElementById('session-info-modal').style.display = 'none';
+            document.getElementById('chat-window-empty').classList.remove('hidden');
+            document.getElementById('chat-window-content').classList.add('hidden');
+            await loadSessionList();
+        }
+    }
+
+    async function unblockUser(sid, userId) {
+        if (!confirm("确定要取消拉黑吗？")) return;
+        const payload = { sessionId: sid };
+        if (userId) payload.userId = userId;
+        const res = await api('/session/unblock', 'PUT', payload);
+        if (res) {
+            alert("已取消拉黑");
+            await loadSessionList();
+            await showSessionInfo();
+        }
+    }
+
+    async function quitGroup(sid) {
+        if (!confirm("确定要退出该群聊吗？")) return;
+        const res = await api('/session/group/quit', 'POST', { sessionId: sid });
+        if (res) {
+            alert("已退出群聊");
+            document.getElementById('session-info-modal').style.display = 'none';
+            document.getElementById('chat-window-empty').classList.remove('hidden');
+            document.getElementById('chat-window-content').classList.add('hidden');
+            await loadSessionList();
+        }
+    }
+
+    async function publishAnnouncement() {
+        const sid = state.chat.activeSessionId;
+        const content = document.getElementById('session-announcement-input').value.trim();
+        if (!content) {
+            alert("公告内容不能为空");
+            return;
+        }
+        const res = await api(`/session/${sid}/announcement`, 'POST', {
+            content: content
+        });
+        if (res) {
+            alert("发布公告成功");
+            document.getElementById('session-announcement-input').value = '';
+            await showSessionInfo();
+        }
+    }
+
+    async function kickMember(sid, userId) {
+        if (!confirm("确定要踢出该成员吗？")) return;
+        const res = await api('/session/group/member/manage', 'PUT', {
+            sessionId: sid,
+            userId: userId,
+            action: 'KICK'
+        });
+        if (res) {
+            alert("已踢出成员");
+            await showSessionInfo();
+        }
+    }
+
+    async function kickAndBlockMember(sid, userId) {
+        if (!confirm("确定要踢出并拉黑该成员吗？")) return;
+        const res = await api('/session/group/member/manage', 'PUT', {
+            sessionId: sid,
+            userId: userId,
+            action: 'BLOCK_AND_KICK'
+        });
+        if (res) {
+            alert("已踢出并拉黑成员");
+            await showSessionInfo();
+        }
+    }
+
+</script>
+</body>
+</html>

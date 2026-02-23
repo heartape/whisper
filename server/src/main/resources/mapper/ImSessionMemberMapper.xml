@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.heartape.whisper.mapper.ImSessionMemberMapper">
+    <delete id="deleteBySessionIdAndUserId">
+        update im_session_member
+        set is_exit = true
+        where session_id = #{sessionId}
+          and user_id = #{userId}
+          and role != 'OWNER'
+          and is_exit = false
+    </delete>
+    <select id="userIds" resultType="java.lang.Long">
+        select user_id
+        from im_session_member
+        where session_id = #{sessionId}
+          and is_exit = 0
+          and is_block = 0
+    </select>
+    <select id="selectBySessionIdAndUserId" resultType="com.heartape.whisper.entity.ImSessionMember">
+        select *
+        from im_session_member
+        where session_id = #{sessionId}
+          and user_id = #{userId}
+          <if test="isMute != null">
+              and is_mute = #{isMute}
+          </if>
+        <if test="isExit != null">
+            and is_exit = #{isExit}
+        </if>
+        <if test="isBlock != null">
+            and is_block = #{isBlock}
+        </if>
+    </select>
+    <select id="existsBySessionIdAndUserId" resultType="java.lang.Boolean">
+        select count(1) > 0
+        from im_session_member
+        where session_id = #{sessionId}
+        and user_id = #{userId}
+        <if test="isMute != null">
+            and is_mute = #{isMute}
+        </if>
+        <if test="isExit != null">
+            and is_exit = #{isExit}
+        </if>
+        <if test="isBlock != null">
+            and is_block = #{isBlock}
+        </if>
+    </select>
+    <select id="selectBySessionIdAndNotUserId" resultType="com.heartape.whisper.entity.ImSessionMember">
+        select *
+        from im_session_member
+        where session_id = #{sessionId}
+          and user_id != #{userId}
+    </select>
+
+    <select id="exists" resultType="java.lang.Boolean">
+        select count(1) > 0 from im_session_member
+        where session_id = #{sessionId}
+          and user_id = #{userId}
+          and is_exit = 0
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into im_session_member(session_id, user_id, role, alias_name, is_mute, is_exit, is_block)
+        values (#{sessionId}, #{userId}, #{role}, #{aliasName}, #{isMute}, #{isExit}, #{isBlock})
+    </insert>
+    <insert id="insertOrUpdate">
+        insert into im_session_member(
+            session_id, user_id, role, alias_name,
+            is_mute, is_exit, is_block,
+            join_time
+        )
+        values (
+                   #{sessionId}, #{userId}, #{role}, #{aliasName},
+                   #{isMute}, 0, #{isBlock}, now()
+               )
+        on duplicate key update
+                             role = values(role),
+                             alias_name = values(alias_name),
+                             is_mute = values(is_mute),
+                             is_exit = values(is_exit),
+                             is_block = values(is_block),
+                             join_time = values(join_time)
+    </insert>
+
+    <update id="resetUnread">
+        update im_session_member
+        set unread_count = 0
+        where session_id = #{sessionId}
+          and user_id = #{userId}
+    </update>
+
+    <update id="updateRole">
+        update im_session_member
+        set role = #{role}
+        where session_id = #{sessionId}
+          and user_id = #{userId}
+          and is_exit = 0
+    </update>
+
+    <update id="updateMuteBySessionIdAndUserId">
+        update im_session_member
+        set is_mute = #{isMute}
+        where session_id = #{sessionId}
+          and user_id = #{userId}
+          and is_exit = 0
+    </update>
+
+    <update id="updateKickBySessionIdAndUserId">
+        update im_session_member
+        set is_exit = 1
+        where session_id = #{sessionId}
+          and user_id = #{userId}
+          and is_exit = 0
+    </update>
+
+    <update id="recoverMember">
+        update im_session_member
+        set is_exit = 0,
+            join_time = now()
+        where session_id = #{sessionId}
+          and user_id = #{userId}
+          and is_exit = 1
+    </update>
+    <update id="updateBlockAndKickBySessionIdAndUserId">
+        update im_session_member
+        set is_exit = true,
+            is_block = true
+        where session_id = #{sessionId}
+          and user_id = #{userId}
+          and is_exit = 0
+    </update>
+    <update id="updateBlockBySessionIdAndUserId">
+        update im_session_member
+        set is_block = #{isBlock}
+        where session_id = #{sessionId}
+          and user_id = #{userId}
+    </update>
+    <update id="updateBySessionIdAndUserId">
+        update im_session_member
+        <set>
+            <if test="value.aliasName != null">
+                alias_name = #{value.aliasName},
+            </if>
+            <if test="value.isBlock != null">
+                is_block = #{value.isBlock},
+            </if>
+        </set>
+        where session_id = #{condition.sessionId}
+        and user_id = #{condition.userId}
+        <if test="condition.isBlock != null">
+            and is_block = #{condition.isBlock}
+        </if>
+    </update>
+    <update id="updateBySessionIdAndNotUserId">
+        update im_session_member
+        <set>
+            <if test="value.aliasName != null">
+                alias_name = #{value.aliasName},
+            </if>
+            <if test="value.isBlock != null">
+                is_block = #{value.isBlock},
+            </if>
+        </set>
+        where session_id = #{condition.sessionId}
+          and user_id != #{condition.userId}
+        <if test="condition.isBlock != null">
+            and is_block = #{condition.isBlock}
+        </if>
+    </update>
+
+    <select id="selectRoleBySessionIdAndUserId" resultType="com.heartape.whisper.common.constant.GroupRoleEnum">
+        select role from im_session_member
+        where session_id = #{sessionId}
+          and user_id = #{userId}
+          and is_exit = 0
+    </select>
+    <select id="selectListBySessionIdAndPairUserId" resultType="com.heartape.whisper.entity.ImSessionMember">
+        select *
+        from im_session_member
+        where session_id = #{sessionId}
+          and user_id in (#{uidMin}, #{uidMax})
+        order by user_id
+    </select>
+    <select id="selectListBySessionIdAndExitAndBlock" resultType="com.heartape.whisper.entity.ImSessionMemberUser">
+        select m.user_id, m.role, m.alias_name, m.is_block, m.join_time, u.avatar, u.username
+        from im_session_member m
+        left join user u on m.user_id = u.id
+        where session_id = #{sessionId}
+          <if test="isExit != null">
+              and is_exit = #{isExit}
+          </if>
+          <if test="isBlock != null">
+              and is_block = #{isBlock}
+          </if>
+        order by join_time
+    </select>
+
+</mapper>

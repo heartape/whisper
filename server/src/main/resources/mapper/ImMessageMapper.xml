@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.heartape.whisper.mapper.ImMessageMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into im_message(session_id, user_id, message_type, message_info)
+        values (#{sessionId}, #{userId}, #{messageType}, #{messageInfo})
+    </insert>
+
+    <select id="selectById" resultType="com.heartape.whisper.entity.ImMessage">
+            select im_message.id,
+                   im_message.session_id,
+                   im_message.user_id,
+                   im_message.message_type,
+                   im_message.message_info,
+                   im_message.create_time
+            from im_message
+            where im_message.id = #{id}
+    </select>
+</mapper>
