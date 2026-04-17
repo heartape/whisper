@@ -1,2 +1,2 @@
 # whisper
-Lightweight instant messaging system
+Lightweight im system

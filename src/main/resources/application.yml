@@ -1,0 +1,62 @@
+server:
+  port: 8080
+spring:
+  datasource:
+    url:
+    username:
+    password:
+  data:
+    redis:
+      host:
+      port: 6379
+      password:
+      ssl:
+        enabled: true              # 公网建议开启加密传输
+      lettuce:
+        pool:
+          max-active: 8            # 连接池最大连接数
+          max-idle: 8              # 最大空闲连接
+          min-idle: 0              # 最小空闲连接
+      timeout: 5000ms
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+jwt:
+  secret: 3qX8LZ2dX5b4M0N7qF6pKQw0X6JH5bKcZlRZpYJ0zH8=
+  expire: 604800000
+  issuer: server
+  audience: Android
+logging:
+  level:
+    # 核心：只看 Logbook 的输出
+    org.zalando.logbook: TRACE
+#    # 屏蔽 Spring 启动和运行时的繁琐信息
+#    org.springframework: WARN
+#    org.mybatis: WARN
+#    # 如果你使用了 Tomcat，屏蔽它的内部日志
+#    org.apache.catalina: WARN
+#    org.apache.tomcat.util.net: WARN
+#    # 你的业务代码依然保持 INFO
+#    com.heartape: INFO
+logbook:
+  format:
+    style: http
+  obfuscate:
+    headers:
+      - Authorization
+    parameters:
+      - password
+  write:
+    level: INFO
+    max-body-size: 1000 # 限制打印长度，防止撑爆磁盘
+
+upload:
+  server: http://10.0.2.2:8080
+  avatar:
+    dir: upload/avatar/
+    prefix: /avatar
+  icon:
+    dir: upload/icon/
+    prefix: /icon

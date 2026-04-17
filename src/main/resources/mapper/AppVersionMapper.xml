@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.heartape.whisper.mapper.AppVersionMapper">
+
+    <resultMap id="BaseResultMap" type="com.heartape.whisper.entity.AppVersion">
+        <id column="id" property="id"/>
+        <result column="platform" property="platform"/>
+        <result column="version_code" property="versionCode"/>
+        <result column="version_name" property="versionName"/>
+        <result column="min_compatible_code" property="minCompatibleCode"/>
+        <result column="download_url" property="downloadUrl"/>
+        <result column="apk_md5" property="apkMd5"/>
+        <result column="release_notes" property="releaseNotes"/>
+        <result column="update_strategy" property="updateStrategy"/>
+        <result column="is_published" property="isPublished"/>
+        <result column="publish_time" property="publishTime"/>
+    </resultMap>
+
+    <select id="findById" resultMap="BaseResultMap">
+        select * from system_app_versions
+        where id = #{id}
+    </select>
+
+    <select id="findLatestByPlatform" resultMap="BaseResultMap">
+        select * from system_app_versions
+        where platform = #{platform}
+        and is_published = true
+        order by version_code desc
+        limit 1
+    </select>
+
+    <select id="findAllByPlatform" resultMap="BaseResultMap">
+        select * from system_app_versions
+        where platform = #{platform}
+        order by version_code desc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into system_app_versions(platform, version_code, version_name, min_compatible_code,
+                               download_url, release_notes, update_strategy, is_published, publish_time)
+        values (#{platform}, #{versionCode}, #{versionName}, #{minCompatibleCode}, 
+                #{downloadUrl}, #{releaseNotes}, #{updateStrategy}, #{isPublished}, #{publishTime})
+    </insert>
+
+    <update id="updateById">
+        update system_app_versions
+        <set>
+            <if test="platform != null">platform=#{platform},</if>
+            <if test="versionCode != null">version_code=#{versionCode},</if>
+            <if test="versionName != null">version_name=#{versionName},</if>
+            <if test="minCompatibleCode != null">min_compatible_code=#{minCompatibleCode},</if>
+            <if test="downloadUrl != null">download_url=#{downloadUrl},</if>
+            <if test="apkMd5 != null">apk_md5=#{apkMd5},</if>
+            <if test="releaseNotes != null">release_notes=#{releaseNotes},</if>
+            <if test="updateStrategy != null">update_strategy=#{updateStrategy},</if>
+            <if test="isPublished != null">is_published=#{isPublished},</if>
+            <if test="publishTime != null">publish_time=#{publishTime},</if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <delete id="delete">
+        delete from system_app_versions
+        where id = #{id}
+    </delete>
+</mapper>

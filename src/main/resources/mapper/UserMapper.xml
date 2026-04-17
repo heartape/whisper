@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.heartape.whisper.mapper.UserMapper">
+    <select id="findById" resultType="com.heartape.whisper.entity.User">
+        select * from user
+        where id = #{id}
+        and status = 'NORMAL'
+    </select>
+
+    <select id="findByPhone" resultType="com.heartape.whisper.entity.User">
+        select * from user
+        where phone = #{phone}
+        and status = 'NORMAL'
+    </select>
+    <select id="simple" resultType="com.heartape.whisper.entity.result.UserSimpleResult">
+        select id, username, avatar from user
+        where id = #{id}
+    </select>
+    <select id="simpleList" resultType="com.heartape.whisper.entity.result.UserSimpleResult">
+        select id, username, avatar, bio from user where id in
+             <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+        and status = 'NORMAL'
+    </select>
+
+    <select id="selectByMatchName" resultType="com.heartape.whisper.entity.User">
+        select *
+        from user
+        where username like concat('%', #{username}, '%')
+        <if test="userId != null">
+            and id != #{userId}
+        </if>
+        and status = 'NORMAL'
+        limit 20
+    </select>
+    <select id="selectUsernameById" resultType="com.heartape.whisper.entity.User">
+        select username from user
+        where id = #{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into user(phone, username, password, avatar, bio, role)
+        values (#{phone}, #{username}, #{password}, #{avatar}, #{bio}, #{role})
+    </insert>
+
+    <update id="updateById">
+        update user
+        <set>
+            <if test="username != null">username=#{username},</if>
+            <if test="avatar != null">avatar=#{avatar},</if>
+            <if test="bio != null">bio=#{bio},</if>
+            <if test="password != null">password=#{password},</if>
+            <if test="phone != null">phone=#{phone},</if>
+        </set>
+        <where>
+            <if test="id != null">id=#{id}</if>
+        </where>
+    </update>
+    <delete id="delete">
+        update user
+        set deleted = true
+        where id = #{userId}
+    </delete>
+</mapper>
